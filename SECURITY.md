@@ -16,7 +16,7 @@ Please **do not** open a public issue for security vulnerabilities.
 Report privately using one of these channels:
 
 - GitHub **Security Advisories**: the **Security** tab -> **Report a vulnerability**
-- E-mail: **daviamarallz@outlook.com**
+- E-mail: **elnwsany2000@gmail.com**
 
 Please include:
 
