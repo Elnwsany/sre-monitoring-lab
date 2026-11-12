@@ -1,0 +1,104 @@
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+}
+
+discovery.relabel "app" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/obs-app"
+    action        = "keep"
+  }
+}
+
+discovery.relabel "nginx" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/obs-nginx"
+    action        = "keep"
+  }
+}
+
+loki.source.docker "app" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.app.output
+  labels     = { service = "app" }
+  forward_to = [loki.process.app.receiver]
+}
+
+loki.process "app" {
+  forward_to = [loki.write.local.receiver]
+
+  stage.multiline {
+    firstline     = "^\\{"
+    max_wait_time = "1s"
+    max_lines     = 128
+  }
+
+  stage.json {
+    expressions = {
+      path        = "path",
+      level       = "level",
+      status_class = "status_class",
+    }
+  }
+
+  stage.drop {
+    source     = "path"
+    expression = "^/(healthz|metrics)(\\?.*)?$"
+  }
+
+  stage.labels {
+    values = {
+      level        = "level",
+      status_class = "status_class",
+    }
+  }
+}
+
+loki.source.docker "nginx" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.nginx.output
+  labels     = { service = "nginx" }
+  forward_to = [loki.process.nginx.receiver]
+}
+
+loki.process "nginx" {
+  forward_to = [loki.write.local.receiver]
+
+  stage.multiline {
+    firstline     = "^\\{"
+    max_wait_time = "1s"
+    max_lines     = 128
+  }
+
+  stage.json {
+    expressions = {
+      uri         = "uri",
+      level       = "level",
+      status_class = "status_class",
+    }
+  }
+
+  stage.drop {
+    source     = "uri"
+    expression = "^/(healthz|metrics)(\\?.*)?$"
+  }
+
+  stage.labels {
+    values = {
+      level        = "level",
+      status_class = "status_class",
+    }
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
