@@ -8,6 +8,18 @@ groups:
             /
           sum(rate(http_requests_total[5m]))
 
+      - record: job:sli_error_ratio:rate1m
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[1m]))
+            /
+          sum(rate(http_requests_total[1m]))
+
+      - record: job:sli_error_ratio:rate10s
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[10s]))
+            /
+          sum(rate(http_requests_total[10s]))
+
       - record: job:sli_latency_p95:rate5m
         expr: |
           histogram_quantile(
@@ -15,16 +27,30 @@ groups:
             sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
           )
 
+      - record: job:sli_latency_p95:rate10s
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket[10s])) by (le)
+          )
+
+      - record: job:sli_latency_p95:rate1m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket[1m])) by (le)
+          )
+
       # --- Alerts driven by SLOs ---
       - alert: HighErrorRate
-        expr: job:sli_error_ratio:rate5m > 0.05
-        for: 2m
+        expr: job:sli_error_ratio:rate1m > 0.05
+        for: 30s
         labels:
           severity: critical
           slo: availability
         annotations:
           summary: "Taxa de erro 5xx acima de 5% (SLO de disponibilidade em risco)"
-          description: "A taxa de erro está em {{ $value | humanizePercentage }} nos últimos 5m."
+          description: "A taxa de erro está em {{ $value | humanizePercentage }} no último 1m."
           runbook: "docs/RUNBOOK.md#high-error-rate"
 
       - alert: HighLatencyP95

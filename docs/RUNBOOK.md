@@ -1,83 +1,83 @@
 # Runbook — Observability Lab
 
-Procedimentos de resposta para os alertas definidos em `prometheus/alerts.yml`.
-Cada seção segue a mesma estrutura: **o que significa → como confirmar → como mitigar → como resolver**.
+Response procedures for the alerts defined in `prometheus/alerts.yml`.
+Each section follows the same structure: **what it means → how to confirm → how to mitigate → how to resolve**.
 
 ---
 
 ## High Error Rate
 
-**Alerta:** `HighErrorRate` · **Severidade:** critical · **SLO:** disponibilidade
+**Alert:** `HighErrorRate` · **Severity:** critical · **SLO:** availability
 
-### Sintomas
-Taxa de respostas 5xx acima de 5% nos últimos 5 minutos.
+### Symptoms
+The 5xx response rate is above 5% over the last minute.
 
-### Confirmar
-1. Abra o Prometheus (`http://localhost:9090`) e consulte:
+### Confirm
+1. Open Prometheus (`http://localhost:9090`) and query:
    ```
-   job:sli_error_ratio:rate5m
+   job:sli_error_ratio:rate1m
    ```
-2. Veja no Grafana o painel **Error ratio (5xx)**.
-3. Identifique o endpoint problemático:
+2. Check the **Error ratio (5xx)** panel in Grafana.
+3. Identify the problematic endpoint:
    ```
    sum by (endpoint) (rate(http_requests_total{status=~"5.."}[5m]))
    ```
 
-### Mitigar (ação imediata)
-- Se for a aplicação: reinicie/redirecione o tráfego (`docker compose restart app`).
-- Se for um deploy recente: **rollback** para a última versão saudável.
-- Se for dependência externa: habilite *circuit breaker* / degrade funcionalidades.
+### Mitigate (immediate action)
+- If the application is at fault, restart it or redirect traffic (`docker compose restart app`).
+- If the issue followed a recent deployment, **roll back** to the last healthy version.
+- If an external dependency is at fault, enable a *circuit breaker* or degrade functionality.
 
-### Resolver
-- Abra postmortem (ver template em `sre-runbooks`).
-- Corrija a causa raiz e adicione teste de regressão.
+### Resolve
+- Write a postmortem (see the template in `sre-runbooks`).
+- Fix the root cause and add a regression test.
 
 ---
 
 ## High Latency P95
 
-**Alerta:** `HighLatencyP95` · **Severidade:** warning · **SLO:** latência
+**Alert:** `HighLatencyP95` · **Severity:** warning · **SLO:** latency
 
-### Sintomas
-Percentil 95 acima de 300 ms por 5 minutos.
+### Symptoms
+The 95th percentile latency is above 300 ms for 5 minutes.
 
-### Confirmar
+### Confirm
 ```
 job:sli_latency_p95:rate5m
 ```
-Painel **Latency P95** no Grafana.
+Check the **Latency P95** panel in Grafana.
 
-### Mitigar
-- Verifique saturação de CPU/memória do pod/container.
-- Aumente réplicas (scale out) se for carga legítima.
-- Verifique dependências lentas (banco, APIs externas).
+### Mitigate
+- Check for CPU or memory saturation in the pod/container.
+- Scale out if the load is legitimate.
+- Check for slow dependencies, such as databases or external APIs.
 
-### Resolver
-- Adicione índices/caching, otimize queries, ajuste timeouts.
+### Resolve
+- Add indexes or caching, optimize queries, and adjust timeouts.
 
 ---
 
 ## App Down
 
-**Alerta:** `AppDown` · **Severidade:** critical
+**Alert:** `AppDown` · **Severity:** critical
 
-### Sintomas
-`up{job="observability-lab-app"} == 0` — o Prometheus não consegue coletar métricas do alvo.
+### Symptoms
+`up{job="observability-lab-app"} == 0` — Prometheus cannot scrape metrics from the target.
 
-### Confirmar
-1. `docker compose ps` — o container está de pé?
+### Confirm
+1. `docker compose ps` — is the container running?
 2. `curl http://localhost:8000/healthz`
-3. Logs: `docker compose logs app --tail=100`
+3. Check the logs: `docker compose logs app --tail=100`
 
-### Mitigar
+### Mitigate
 - `docker compose restart app`
-- Cheque limites de memória (OOMKilled) e portas em uso.
+- Check memory limits (`OOMKilled`) and ports in use.
 
-### Resolver
-- Corrija a falha de inicialização; garanta probes corretas.
+### Resolve
+- Fix the startup failure and ensure the probes are configured correctly.
 
 ---
 
-## Referências
+## References
 - [Google SRE Book — Monitoring](https://sre.google/sre-book/monitoring-distributed-systems/)
 - [Prometheus — Alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)

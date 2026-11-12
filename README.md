@@ -1,4 +1,4 @@
-# Observability Lab
+# sre-monitoring-lab
 
 [![CI](https://github.com/daviamarall/observability-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/daviamarall/observability-lab/actions/workflows/ci.yml)
 ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white)
@@ -7,115 +7,131 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Stack de **observabilidade** completa, do zero, rodando com um único `docker compose up` — feita para demonstrar os fundamentos de **SRE**: medir, alertar e reagir com base em **SLI/SLO**.
+A complete, from-scratch **observability** stack that runs with a single `docker compose up`. It demonstrates core **SRE** fundamentals: measuring, alerting, and responding based on **SLIs/SLOs**.
 
-> Projeto de portfólio focado em **SRE / DevOps**. O foco é o **pipeline de dados de telemetria** e a **disciplina operacional** ao redor dele.
+> A portfolio project focused on **SRE / DevOps**. Its emphasis is the **telemetry data pipeline** and the **operational discipline** built around it.
 
 ---
 
-## 🎯 O que este repositório demonstra
+## 🎯 What This Repository Demonstrates
 
-- **Instrumentação** de uma aplicação com `prometheus_client` (Counter, Histogram, Gauge)
-- **Coleta** de métricas com Prometheus (scrape config, retention)
-- **Alerting** com Alertmanager (rotas, agrupamento, silenciamento)
-- **Regras de alerta** baseadas em **SLI/SLO** (taxa de erro e latência P95)
-- **Dashboards as code** provisionados automaticamente no Grafana
-- **Definição formal de SLI/SLO + error budget** (ver [`docs/SLI-SLO.md`](docs/SLI-SLO.md))
-- **Runbook** de resposta a incidentes (ver [`docs/RUNBOOK.md`](docs/RUNBOOK.md))
-- Ambiente 100% reproduzível via Docker Compose
+- **Instrumentation** of an application using `prometheus_client` (Counter, Histogram, Gauge)
+- **Metrics collection** with Prometheus (scrape configuration, retention)
+- **Alerting** with Alertmanager (routing, grouping, silencing)
+- **SLI/SLO-based alert rules** (error rate and P95 latency)
+- **Dashboards as code**, automatically provisioned in Grafana
+- **Formal SLI/SLO definitions with error budgets** (see [`docs/SLI-SLO.md`](docs/SLI-SLO.md))
+- **Incident response runbook** (see [`docs/RUNBOOK.md`](docs/RUNBOOK.md))
+- A fully reproducible environment via Docker Compose
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
 ```
                     ┌──────────────────────────────────────────────┐
-                    │              docker compose                   │
-                    │                                                │
-  curl /work ─────▶ │  ┌────────┐   scrape   ┌────────────┐          │
-                    │  │  app   │◀───────────│ Prometheus │          │
-                    │  │ :8000  │  /metrics  │   :9090    │          │
-                    │  └────────┘            └─────┬──────┘          │
-                    │                              │ evaluates rules │
-                    │                              ▼                  │
-                    │                        ┌──────────────┐        │
-                    │                        │ Alertmanager │        │
-                    │                        │    :9093     │        │
-                    │                        └──────────────┘        │
-                    │                                                │
-                    │  ┌──────────┐   query    ┌────────────┐        │
-                    │  │ Grafana  │◀───────────│ Prometheus │        │
-                    │  │  :3000   │            └────────────┘        │
-                    │  └──────────┘                                  │
+                    │              docker compose                  │
+                    │                                              │
+  curl /work ─────▶ │  ┌────────┐   scrape   ┌────────────┐        │
+                    │  │  app   │◀───────────│ Prometheus │        │
+                    │  │ :8000  │  /metrics  │   :9090    │        │
+                    │  └────────┘            └─────┬──────┘        │
+                    │                              │ evaluates     │
+                    │                              │ rules         │
+                    │                              ▼               │
+                    │                        ┌──────────────┐      │
+                    │                        │ Alertmanager │      │
+                    │                        │    :9093     │      │
+                    │                        └──────────────┘      │
+                    │                                              │
+                    │  ┌──────────┐   query    ┌────────────┐      │
+                    │  │ Grafana  │◀───────────│ Prometheus │      │
+                    │  │  :3000   │            └────────────┘      │
+                    │  └──────────┘                                │
                     └──────────────────────────────────────────────┘
 ```
 
 ## 📊 Dashboard (Grafana)
 
-Dashboard provisionado **como código**, com os SLIs do serviço (taxa de requisições, taxa de erro 5xx, latência P95 e targets up):
+The dashboard is provisioned **as code** and visualizes the service's SLIs: request rate, 5xx error rate, P95 latency, and target availability.
 
-![Dashboard SLI/SLO no Grafana](docs/images/grafana-dashboard.png)
+![SLI/SLO Dashboard in Grafana](docs/images/grafana-dashboard.png)
 
-## 🚀 Como rodar
+## 🚀 Getting Started
 
 ```bash
 docker compose up --build
 ```
 
-| Serviço      | URL                     | Credenciais  |
-|--------------|-------------------------|--------------|
-| API + /metrics | http://localhost:8000 | —            |
-| Prometheus   | http://localhost:9090   | —            |
-| Alertmanager | http://localhost:9093   | —            |
-| Grafana      | http://localhost:3000   | admin/admin  |
+| Service        | URL                   | Credentials |
+|----------------|-----------------------|-------------|
+| API + /metrics | http://localhost:8000 | —           |
+| Prometheus     | http://localhost:9090 | —           |
+| Alertmanager   | http://localhost:9093 | —           |
+| Grafana        | http://localhost:3000 | admin/admin |
 
-### Gerar tráfego (para ver os gráficos vivos)
+### Generating Traffic (to see live graphs)
+
+The following sends 200 requests with a simulated ~15% failure rate and ~120 ms latency.
+
+**Linux / macOS (bash):**
 
 ```bash
-# 200 chamadas com ~15% de falha simulada e ~120ms de latência
+for i in $(seq 1 200); do
+  curl -s "http://localhost:8000/work?fail=0.15&delay=0.12" > /dev/null
+done
+```
+
+**Windows (PowerShell):**
+
+```powershell
 for ($i=0; $i -lt 200; $i++) { curl "http://localhost:8000/work?fail=0.15&delay=0.12" }
 ```
 
-## 🔌 Endpoints da aplicação
+## 🔌 Application Endpoints
 
-| Método | Rota        | Descrição                                             |
-|--------|-------------|-------------------------------------------------------|
-| GET    | `/`         | Metadados do serviço                                  |
-| GET    | `/healthz`  | Liveness probe                                        |
-| GET    | `/work`     | Simula trabalho; `?fail=0..1` e `?delay=segundos`     |
-| GET    | `/metrics`  | Métricas no formato Prometheus                        |
+| Method | Route      | Description                                                    |
+|--------|------------|----------------------------------------------------------------|
+| GET    | `/`        | Service metadata                                               |
+| GET    | `/healthz` | Liveness probe                                                 |
+| GET    | `/work`    | Simulates work; supports `?fail=0..1` and `?delay=<seconds>`   |
+| GET    | `/metrics` | Metrics in Prometheus format                                   |
 
-## 📊 SLI / SLO (resumo)
+## 📈 SLI / SLO Summary
 
-| SLI                         | SLO alvo      | Error budget (30d) |
-|-----------------------------|---------------|--------------------|
-| Disponibilidade (taxa 2xx)  | 99,9%         | 43m12s             |
-| Latência P95                | < 300 ms      | 5% dos períodos    |
+| SLI                          | SLO Target | Error Budget (30 days) |
+|------------------------------|------------|------------------------|
+| Availability (2xx rate)      | 99.9%      | 43m 12s                |
+| Latency (P95)                | < 300 ms   | 5% of time windows     |
 
-Detalhes em [`docs/SLI-SLO.md`](docs/SLI-SLO.md).
+See [`docs/SLI-SLO.md`](docs/SLI-SLO.md) for full details.
 
-## 🚨 Alertas configurados
+## 🚨 Configured Alerts
 
-| Alerta            | Condição                                           | Severidade |
-|-------------------|----------------------------------------------------|------------|
-| `HighErrorRate`   | taxa 5xx > 5% por 2 min                            | critical   |
-| `HighLatencyP95`  | P95 > 0.3s por 5 min                               | warning    |
-| `AppDown`         | `up == 0` por 1 min                                | critical   |
+| Alert            | Condition                       | Severity |
+|------------------|---------------------------------|----------|
+| `HighErrorRate`  | 5xx rate > 5% for 30 seconds    | critical |
+| `HighLatencyP95` | P95 latency > 0.3s for 5 minutes| warning  |
+| `AppDown`        | `up == 0` for 1 minute          | critical |
 
-## 📁 Estrutura
+For local demos, Prometheus scrapes and evaluates rules every second, and the
+dashboard refreshes every second with 10-second rolling metrics. The
+`HighErrorRate` alert retains a 1-minute rolling error-rate window.
+
+## 📁 Project Structure
 
 ```
 observability-lab/
-├── app/                     # aplicação instrumentada (FastAPI + prometheus_client)
-├── prometheus/              # prometheus.yml + alerts.yml (regras SLO)
-├── alertmanager/            # alertmanager.yml (rotas)
-├── grafana/                 # provisionamento de datasource + dashboards (as code)
-├── docs/                    # SLI-SLO.md e RUNBOOK.md
+├── app/                     # Instrumented application (FastAPI + prometheus_client)
+├── prometheus/              # prometheus.yml + alerts.yml (SLO rules)
+├── alertmanager/            # alertmanager.yml (routing)
+├── grafana/                 # Datasource + dashboard provisioning (as code)
+├── docs/                    # SLI-SLO.md and RUNBOOK.md
 └── docker-compose.yml
 ```
 
-## 🛠️ Stack
+## 🛠️ Tech Stack
 
 Python · FastAPI · prometheus_client · Prometheus · Alertmanager · Grafana · Docker Compose
 
-## 📄 Licença
+## 📄 License
 
-MIT — veja [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
